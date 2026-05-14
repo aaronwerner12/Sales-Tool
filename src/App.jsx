@@ -307,7 +307,7 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-5",
       max_tokens: 5000,
       system: SYS_PROMPT,
       messages: [{ role: "user", content: prompt }],
@@ -539,7 +539,9 @@ export default function App() {
                     <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:filterSeg===seg.id?seg.color:"#777",fontWeight:filterSeg===seg.id?"700":"400",textTransform:"uppercase",letterSpacing:"0.5px"}}>{seg.label}</span>
                     {st.loading
                       ? <div style={{width:8,height:8,border:`1.5px solid ${seg.border}`,borderTopColor:seg.color,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                      : <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:count>0?seg.color:"#ccc",padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>{count}</span>
+                      : st.error
+                        ? <span title={st.error} style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:C.myrtle1,padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>!</span>
+                        : <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:count>0?seg.color:"#ccc",padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>{count}</span>
                     }
                   </button>
                 );
@@ -554,6 +556,19 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* Error banner */}
+            {Object.entries(segStatus).some(([,s])=>s.error) && (
+              <div style={{background:"#fff5f5",borderBottom:`2px solid ${C.myrtle}`,padding:"8px 18px"}}>
+                <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.myrtle1,letterSpacing:"2px",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>⚠ API Error — Check Vercel Environment Variables</div>
+                {Object.entries(segStatus).filter(([,s])=>s.error).map(([id,s])=>(
+                  <div key={id} style={{fontSize:9,color:C.myrtle1,marginBottom:2}}>
+                    <strong>{id}:</strong> {s.error}
+                  </div>
+                ))}
+                <div style={{fontSize:9,color:"#888",marginTop:5}}>Make sure <strong>ANTHROPIC_API_KEY</strong> is set in Vercel → Project Settings → Environment Variables, then redeploy.</div>
+              </div>
+            )}
 
             {/* Urgent strip */}
             {urgentLeads.length > 0 && (
