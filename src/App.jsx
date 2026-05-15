@@ -362,18 +362,31 @@ export default function App() {
   const [saved, setSaved] = useState(new Set());
   const hasStarted = useRef(false);
 
-  async function loadSegment(seg) {
-    setSegStatus(p => ({ ...p, [seg.id]: { loading: true, done: false, error: null } }));
+  async function loadSegment(seg, attempt = 1) {
+    setSegStatus(p => ({ ...p, [seg.id]: { loading: true, done: false, error: null, retryIn: null } }));
     try {
       const newLeads = await generateLeadsForSegment(seg.id);
       setLeads(prev => {
         const ex = new Set(prev.map(l => l.id));
         return [...prev, ...newLeads.filter(l => !ex.has(l.id))];
       });
-      setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: null } }));
+      setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: null, retryIn: null } }));
     } catch(e) {
       console.error(seg.id, e);
-      setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: e.message } }));
+      const isRateLimit = e.message.includes("429") || e.message.includes("rate_limit");
+      if (isRateLimit && attempt <= 3) {
+        const wait = 65;
+        setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: false, error: null, retryIn: wait } }));
+        let remaining = wait;
+        const tick = setInterval(() => {
+          remaining -= 1;
+          setSegStatus(p => ({ ...p, [seg.id]: { ...p[seg.id], retryIn: remaining } }));
+          if (remaining <= 0) clearInterval(tick);
+        }, 1000);
+        setTimeout(() => loadSegment(seg, attempt + 1), wait * 1000);
+      } else {
+        setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: e.message, retryIn: null } }));
+      }
     }
   }
 
@@ -539,6 +552,8 @@ export default function App() {
                     <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:filterSeg===seg.id?seg.color:"#777",fontWeight:filterSeg===seg.id?"700":"400",textTransform:"uppercase",letterSpacing:"0.5px"}}>{seg.label}</span>
                     {st.loading
                       ? <div style={{width:8,height:8,border:`1.5px solid ${seg.border}`,borderTopColor:seg.color,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                      : st.retryIn
+                        ? <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:C.sun1,padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>{st.retryIn}s</span>
                       : st.error
                         ? <span title={st.error} style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:C.myrtle1,padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>!</span>
                         : <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:count>0?seg.color:"#ccc",padding:"0 5px",borderRadius:8,fontWeight:700,minWidth:16,textAlign:"center"}}>{count}</span>
@@ -558,7 +573,7 @@ export default function App() {
             </div>
 
             {/* Error banner */}
-            {Object.entries(segStatus).some(([,s])=>s.error) && (
+            {Object.entries(segStatus).some(([,s])=>s.error && !s.retryIn) && (
               <div style={{background:"#fff5f5",borderBottom:`2px solid ${C.myrtle}`,padding:"8px 18px"}}>
                 <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.myrtle1,letterSpacing:"2px",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>⚠ API Error — Check Vercel Environment Variables</div>
                 {Object.entries(segStatus).filter(([,s])=>s.error).map(([id,s])=>(
