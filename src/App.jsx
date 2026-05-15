@@ -80,7 +80,6 @@ JSON schema for each lead:
   "contactEmail": "realistic email",
   "contactPhone": "phone number",
   "contactWebsite": "website URL",
-  "rfpUrl": "direct URL to the RFP posting, event registration page, or tournament info page — the most specific link available",
   "sourceUrl": "https://example.com",
   "summary": "1-2 sentence description of the group need",
   "sv": {
@@ -346,10 +345,34 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     id: `${segId}-${ts}-${i}`,
     segment: l.segment || segId,
     foundAt: new Date().toLocaleTimeString(),
+    rfpUrl: null,
   }));
 }
 
-export default function App() {
+function buildSearchQuery(lead) {
+  const base = `${lead.organization} ${lead.eventType}`;
+  if (lead.segment === "sports")       return `${base} tournament registration hotel room block 2026`;
+  if (lead.segment === "corporate")    return `${base} annual meeting conference 2026`;
+  if (lead.segment === "construction") return `${base} project housing extended stay`;
+  if (lead.segment === "weddings")     return `${base} wedding venue McKinney Texas`;
+  if (lead.segment === "reunions")     return `${base} reunion registration 2026`;
+  return `${base} conference meeting RFP 2026`;
+}
+
+async function searchRfpLink(lead) {
+  try {
+    const res = await fetch("/api/search-rfp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: buildSearchQuery(lead) }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.results?.[0]?.url || null;
+  } catch { return null; }
+}
+
+
   const [leads, setLeads] = useState([]);
   const [segStatus, setSegStatus] = useState(() =>
     Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: false, error: null }]))
@@ -423,6 +446,19 @@ export default function App() {
         return merged;
       });
       setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: null, retryIn: null } }));
+
+      // Enrich each lead with a real RFP link in the background
+      newLeads.forEach((lead, i) => {
+        setTimeout(async () => {
+          const url = await searchRfpLink(lead);
+          if (!url) return;
+          setLeads(prev => {
+            const updated = prev.map(l => l.id === lead.id ? { ...l, rfpUrl: url } : l);
+            saveCache(updated);
+            return updated;
+          });
+        }, i * 1200);
+      });
     } catch(e) {
       console.error(seg.id, e);
       const isRateLimit = e.message.includes("429") || e.message.includes("rate_limit");
