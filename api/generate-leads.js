@@ -1,27 +1,33 @@
 const SEGMENT_QUERIES = {
   sports: [
-    "Texas youth sports tournament 2026 hotel room block registration",
-    "DFW youth baseball volleyball soccer basketball tournament 2026 hotel",
+    "site:sportsengine.com OR site:perfectgame.org OR site:usssa.com Texas tournament 2026 hotel",
+    "DFW North Texas youth baseball softball volleyball basketball tournament 2026 teams hotel block",
+    "Texas AAU tournament 2026 McKinney Frisco Allen hotel",
   ],
   corporate: [
-    "Dallas Fort Worth corporate conference annual meeting hotel RFP 2026",
-    "Texas company sales kickoff leadership retreat hotel 2026",
+    "Dallas Fort Worth corporate conference annual meeting 2026 hotel room block RFP",
+    "Texas association annual conference 2026 DFW hotel site:cvent.com OR site:meetingsnet.com",
+    "North Texas business summit leadership conference 2026 hotel",
   ],
   construction: [
-    "Collin County McKinney Texas construction development project 2026",
-    "North Texas data center manufacturing facility construction 2026",
+    "Collin County Texas commercial construction project 2026 workforce housing hotel",
+    "McKinney Allen Frisco Texas data center warehouse development project 2026",
+    "North Texas corporate relocation expansion 2026 extended stay hotel",
   ],
   weddings: [
-    "McKinney Texas wedding 2026 hotel room block",
-    "DFW North Texas wedding 2026 hotel room block out of town guests",
+    "site:theknot.com OR site:weddingwire.com McKinney Texas wedding 2026 hotel room block",
+    "DFW North Texas wedding venue 2026 out of town guests hotel block rooms",
+    "McKinney Texas wedding 2026 hotel accommodation room block",
   ],
   reunions: [
-    "Texas family reunion 2026 hotel room block registration",
-    "Texas class reunion alumni gathering 2026 hotel block",
+    "Texas family reunion 2026 hotel room block registration site:reunionfriendly.com OR site:eventbrite.com",
+    "Texas high school college class reunion 2026 hotel block DFW",
+    "Texas military reunion association 2026 hotel",
   ],
   boutique: [
-    "Texas association annual conference meeting hotel 2026",
-    "Texas professional organization conference RFP hotel 2026",
+    "Texas nonprofit association annual conference 2026 hotel RFP site:cvent.com",
+    "Texas statewide association annual meeting 2026 DFW hotel",
+    "North Texas medical legal education professional conference 2026 hotel",
   ],
 };
 
@@ -61,8 +67,8 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           api_key: tavilyKey,
           query: q,
-          max_results: 5,
-          search_depth: 'basic',
+          max_results: 7,
+          search_depth: 'advanced',
         }),
       }).then(r => r.json()).catch(() => ({ results: [] }))
     )
@@ -92,16 +98,17 @@ export default async function handler(req, res) {
 
 ${HOTEL_CONTEXT}
 
-Below are REAL web search results. Extract group hotel lead opportunities from them.
+Below are REAL web search results. Your job is to extract group hotel lead opportunities — events, tournaments, conferences, weddings, reunions, or construction projects that would need hotel rooms in the DFW / North Texas area.
 
-STRICT RULES:
-- Only include organizations and events explicitly mentioned in the search results
-- Only include data (dates, attendee counts, room counts, contact info) that is explicitly stated in the results — use null if not found
+RULES:
+- Extract any real organization or event mentioned in the results that could plausibly need hotel rooms
+- Use the exact organization/event name from the results
+- For numeric fields (rooms, attendees), use what is stated; if a range is given use the midpoint; if not stated use null
 - Use the actual URL from the search result as sourceUrl
-- Do not invent, guess, or add information not in the results
-- If results contain few leads, return fewer items — accuracy over quantity
-- fitReason and concerns are YOUR analysis of McKinney fit based on the hotel inventory above
-- For contact fields: only populate if a real name/email/phone/website appears in the search results for that specific organization; otherwise use null
+- Do NOT invent contact info, dates, or room counts not in the results — use null for missing fields
+- fitScore and fitReason are your analysis of how well McKinney's hotel inventory fits the opportunity
+- For contact fields: only include name/email/phone/website if explicitly in the results for that org
+- Aim for 3-6 leads per segment; if results are thin, fewer is fine — never fabricate
 
 SEARCH RESULTS:
 ${resultsText}
@@ -109,25 +116,25 @@ ${resultsText}
 Return ONLY a valid JSON array (no markdown, no explanation):
 [
   {
-    "organization": "exact org name from results",
+    "organization": "exact org or event name from results",
     "segment": "${segmentId}",
-    "eventType": "specific event type from results or null",
-    "estimatedRooms": "room count from results or null",
-    "estimatedAttendees": "attendee count from results or null",
-    "dates": "dates from results or null",
+    "eventType": "tournament / conference / wedding / reunion / construction crew / etc or null",
+    "estimatedRooms": "number as string or null",
+    "estimatedAttendees": "number as string or null",
+    "dates": "dates or season from results or null",
     "rfpDue": "YYYY-MM-DD from results or null",
-    "location": "location from results or null",
+    "location": "city/state from results or null",
     "fitScore": 0-100,
-    "fitReason": "2-3 sentences on McKinney hotel fit",
-    "concerns": "1 sentence on watch-outs or null",
-    "summary": "1-2 sentences summarizing the real opportunity",
+    "fitReason": "2-3 sentences on why McKinney hotel inventory fits",
+    "concerns": "1 sentence on potential concerns or null",
+    "summary": "1-2 sentences summarizing the opportunity",
     "sourceUrl": "actual URL from search results",
     "contact": {
       "name": "full name from results or null",
       "title": "job title from results or null",
       "email": "email address from results or null",
       "phone": "phone number from results or null",
-      "website": "organization website from results or null"
+      "website": "org website from results or null"
     },
     "sv": {
       "meetingName": "event name",
@@ -149,7 +156,7 @@ Return ONLY a valid JSON array (no markdown, no explanation):
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
