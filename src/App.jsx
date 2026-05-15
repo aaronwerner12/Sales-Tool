@@ -291,9 +291,9 @@ async function generateLeadsForSegment(segId) {
 
   const prompt = `${segSpecific}
 
-Generate exactly 6 leads. Today is May 2026. For each lead use realistic Texas organization names, real-sounding contacts, plausible email formats, and genuine-feeling details. Include:
-- Mix of fitScores: 2 leads at 82-90, 2 at 70-80, 2 at 58-68
-- RFP deadlines: 2 urgent (within 30 days of today May 2026), 2 in 60-90 days, 2 null
+Generate exactly 4 leads. Today is May 2026. For each lead use realistic Texas organization names, real-sounding contacts, plausible email formats, and genuine-feeling details. Include:
+- Mix of fitScores: 1 lead at 82-90, 2 at 70-80, 1 at 58-68
+- RFP deadlines: 1 urgent (within 30 days of today May 2026), 1 in 60-90 days, 2 null
 - Varied locations: some DFW, some Houston/Austin, some national orgs
 
 Return ONLY a valid JSON array. Start with [ and end with ]. No markdown, no explanation, no code fences.
@@ -308,7 +308,7 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-5",
-      max_tokens: 3500,
+      max_tokens: 1800,
       system: SYS_PROMPT,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -385,7 +385,7 @@ export default function App() {
     setLastRefresh(new Date());
     setSegStatus(Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: false, error: null }])));
     SEGMENTS.forEach((seg, i) => {
-      setTimeout(() => loadSegment(seg), i * 20000);
+      setTimeout(() => loadSegment(seg), i * 35000);
     });
   }
 
