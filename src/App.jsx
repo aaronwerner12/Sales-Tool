@@ -361,7 +361,35 @@ export default function App() {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [dismissed, setDismissed] = useState(new Set());
   const [saved, setSaved] = useState(new Set());
+  const [pipeline, setPipeline] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("vmck_pipeline") || "[]"); } catch { return []; }
+  });
   const hasStarted = useRef(false);
+
+  const PIPELINE_STATUSES = ["Prospect","Contacted","Proposal Sent","Won","Lost"];
+  const PIPELINE_COLORS = {Prospect:C.denim2,Contacted:C.sun1,"Proposal Sent":C.lilac1,Won:C.denim1,Lost:"#aaa"};
+
+  function savePipeline(updated) {
+    setPipeline(updated);
+    try { localStorage.setItem("vmck_pipeline", JSON.stringify(updated)); } catch {}
+  }
+
+  function addToPipeline(lead) {
+    if (pipeline.find(p => p.id === lead.id)) return;
+    savePipeline([{ ...lead, pipelineStatus: "Prospect", pipelineNote: "", addedAt: new Date().toLocaleDateString() }, ...pipeline]);
+  }
+
+  function updatePipelineStatus(id, status) {
+    savePipeline(pipeline.map(p => p.id === id ? { ...p, pipelineStatus: status } : p));
+  }
+
+  function updatePipelineNote(id, note) {
+    savePipeline(pipeline.map(p => p.id === id ? { ...p, pipelineNote: note } : p));
+  }
+
+  function removeFromPipeline(id) {
+    savePipeline(pipeline.filter(p => p.id !== id));
+  }
   const CACHE_KEY = "vmck_leads_cache";
   const CACHE_TTL = 1000 * 60 * 60 * 8; // 8 hours
 
@@ -558,10 +586,11 @@ export default function App() {
               ? <><div style={{width:9,height:9,border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"white",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Generating…</>
               : "↺ Refresh All"}
           </button>
-          {["dashboard","inventory","market"].map(t=>(
+          {["dashboard","pipeline","inventory","market"].map(t=>(
             <button key={t} onClick={()=>setActiveTab(t)}
-              style={{padding:"4px 11px",fontSize:9,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:14,fontWeight:700,fontFamily:"'Josefin Sans',sans-serif",cursor:"pointer",border:"none",background:activeTab===t?C.denim2:"transparent",color:activeTab===t?"white":"rgba(166,217,202,0.7)"}}>
+              style={{padding:"4px 11px",fontSize:9,letterSpacing:"1.5px",textTransform:"uppercase",borderRadius:14,fontWeight:700,fontFamily:"'Josefin Sans',sans-serif",cursor:"pointer",border:"none",background:activeTab===t?C.denim2:"transparent",color:activeTab===t?"white":"rgba(166,217,202,0.7)",display:"flex",alignItems:"center",gap:4}}>
               {t}
+              {t==="pipeline" && pipeline.length > 0 && <span style={{background:C.mint1,color:"white",borderRadius:8,padding:"0 5px",fontSize:8,fontWeight:700}}>{pipeline.length}</span>}
             </button>
           ))}
         </div>
@@ -720,6 +749,18 @@ export default function App() {
                   </a>
                 )}
                 <div style={{borderTop:`2px solid ${C.dust}`,paddingTop:10,marginTop:4}}>
+                  {pipeline.find(p=>p.id===selected.id) ? (
+                    <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8,padding:"6px 10px",background:"#f0f8f9",border:`1px solid ${C.mint}`,borderRadius:6}}>
+                      <span style={{fontSize:10}}>✅</span>
+                      <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.denim1,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",flex:1}}>In Pipeline</span>
+                      <button onClick={()=>setActiveTab("pipeline")} style={{background:C.denim2,color:"white",border:"none",borderRadius:4,padding:"2px 8px",fontSize:8,cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"1px"}}>View →</button>
+                    </div>
+                  ) : (
+                    <button onClick={()=>{ addToPipeline(selected); setActiveTab("pipeline"); }}
+                      style={{width:"100%",background:C.mint1,color:"white",border:"none",borderRadius:6,padding:"7px 12px",fontFamily:"'Josefin Sans',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7,marginBottom:8}}>
+                      📁 Move to Pipeline
+                    </button>
+                  )}
                   <button onClick={()=>setShowSv(!showSv)}
                     style={{width:"100%",background:showSv?C.denim:C.cotton,color:showSv?"white":C.denim,border:`2px solid ${showSv?C.denim:C.mint}`,borderRadius:6,padding:"7px 12px",fontFamily:"'Josefin Sans',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
                     <span>📋</span>{showSv ? "Hide Simpleview ▲" : "Prepare for Simpleview CRM ▼"}
@@ -729,6 +770,101 @@ export default function App() {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {activeTab === "pipeline" && (
+        <div style={{padding:"20px",overflow:"auto",height:"calc(100vh - 57px)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div>
+              <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:20,color:C.denim,fontWeight:700,marginBottom:2}}>Pipeline</div>
+              <div style={{fontSize:11,color:"#888"}}>{pipeline.length} leads · stored locally · survives refresh</div>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              {PIPELINE_STATUSES.map(s => {
+                const count = pipeline.filter(p=>p.pipelineStatus===s).length;
+                return count > 0 ? (
+                  <div key={s} style={{background:"white",border:`1px solid ${C.dust}`,borderRadius:6,padding:"5px 10px",textAlign:"center"}}>
+                    <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:16,color:PIPELINE_COLORS[s],fontWeight:700}}>{count}</div>
+                    <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,color:"#999",textTransform:"uppercase",letterSpacing:"1px"}}>{s}</div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+
+          {pipeline.length === 0 && (
+            <div style={{textAlign:"center",padding:"60px 20px",background:"white",borderRadius:8,border:`2px dashed ${C.dust}`}}>
+              <div style={{fontSize:32,marginBottom:12}}>📁</div>
+              <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:13,color:C.denim,fontWeight:700,marginBottom:6}}>Pipeline is empty</div>
+              <div style={{fontSize:11,color:"#888"}}>Open a lead on the Dashboard and click <strong>Move to Pipeline</strong> to save it here permanently.</div>
+            </div>
+          )}
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:12}}>
+            {pipeline.map(lead => {
+              const seg = SEG_MAP[lead.segment] || SEGMENTS[0];
+              const status = lead.pipelineStatus || "Prospect";
+              const statusColor = PIPELINE_COLORS[status] || C.denim2;
+              return (
+                <div key={lead.id} style={{background:"white",border:`1px solid ${C.dust}`,borderRadius:8,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+                  <div style={{background:C.denim,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <span style={{fontSize:14}}>{seg.icon}</span>
+                      <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:10,color:"white",fontWeight:700}}>{lead.organization}</span>
+                    </div>
+                    <button onClick={()=>removeFromPipeline(lead.id)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.4)",cursor:"pointer",fontSize:12}} title="Remove from pipeline">✕</button>
+                  </div>
+                  <div style={{padding:"10px 12px"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{fontSize:9,color:"#888"}}>{lead.eventType}</span>
+                      <ViabilityBar score={lead.fitScore}/>
+                    </div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                      {lead.estimatedRooms && <span style={{fontSize:9,color:"#777"}}>🛏 {lead.estimatedRooms}</span>}
+                      {lead.dates && <span style={{fontSize:9,color:"#777"}}>📆 {lead.dates}</span>}
+                      {lead.rfpDue && <DeadlineBadge rfpDue={lead.rfpDue}/>}
+                    </div>
+
+                    {/* Status selector */}
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,color:C.denim2,textTransform:"uppercase",letterSpacing:"1px",fontWeight:700,marginBottom:4}}>Status</div>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                        {PIPELINE_STATUSES.map(s => (
+                          <button key={s} onClick={()=>updatePipelineStatus(lead.id,s)}
+                            style={{padding:"2px 8px",fontSize:8,borderRadius:10,border:`1px solid ${s===status?statusColor:C.dust}`,background:s===status?statusColor:"transparent",color:s===status?"white":"#888",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:s===status?"700":"400",transition:"all 0.15s"}}>
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Contact */}
+                    {(lead.contactInfo || lead.contactEmail) && (
+                      <div style={{background:C.cotton,borderRadius:5,padding:"6px 8px",marginBottom:8,fontSize:9,color:"#555"}}>
+                        {lead.contactInfo && <div style={{fontWeight:600,marginBottom:2}}>{lead.contactInfo}</div>}
+                        {lead.contactEmail && <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span>{lead.contactEmail}</span><CopyBtn value={lead.contactEmail}/></div>}
+                        {lead.contactPhone && <div>{lead.contactPhone}</div>}
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    <div>
+                      <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,color:C.denim2,textTransform:"uppercase",letterSpacing:"1px",fontWeight:700,marginBottom:3}}>Notes</div>
+                      <textarea
+                        value={lead.pipelineNote || ""}
+                        onChange={e=>updatePipelineNote(lead.id, e.target.value)}
+                        placeholder="Add notes, follow-up actions..."
+                        style={{width:"100%",fontSize:9,border:`1px solid ${C.dust}`,borderRadius:4,padding:"5px 7px",fontFamily:"'Libre Franklin',serif",color:C.char,background:C.cotton,resize:"vertical",minHeight:48,lineHeight:1.5}}
+                      />
+                    </div>
+
+                    <div style={{marginTop:6,fontSize:8,color:"#bbb"}}>Added {lead.addedAt}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
