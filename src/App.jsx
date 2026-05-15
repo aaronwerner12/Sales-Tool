@@ -80,6 +80,7 @@ JSON schema for each lead:
   "contactEmail": "realistic email",
   "contactPhone": "phone number",
   "contactWebsite": "website URL",
+  "rfpUrl": "direct URL to the RFP posting, event registration page, or tournament info page — the most specific link available",
   "sourceUrl": "https://example.com",
   "summary": "1-2 sentence description of the group need",
   "sv": {
@@ -532,7 +533,15 @@ export default function App() {
           {lead.dates && <span style={{fontSize:9,color:"#777"}}>📆 {lead.dates}</span>}
           {lead.location && <span style={{fontSize:9,color:"#777"}}>📍 {lead.location}</span>}
         </div>
-        {lead.rfpDue && <div style={{marginBottom:4}}><DeadlineBadge rfpDue={lead.rfpDue}/></div>}
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
+          {lead.rfpDue && <DeadlineBadge rfpDue={lead.rfpDue}/>}
+          {lead.rfpUrl && (
+            <a href={lead.rfpUrl} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}
+              style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:C.denim2,border:`1px solid ${C.denim2}`,borderRadius:10,padding:"2px 8px",fontWeight:700,letterSpacing:"0.5px",whiteSpace:"nowrap",textDecoration:"none"}}>
+              🔗 RFP Link
+            </a>
+          )}
+        </div>
         {!compact && lead.summary && (
           <div style={{fontSize:9,color:"#666",lineHeight:1.5,borderTop:`1px solid ${C.cotton}`,paddingTop:4,marginTop:4}}>
             {lead.summary}
@@ -725,6 +734,12 @@ export default function App() {
                   {selected.rfpDue && <DeadlineBadge rfpDue={selected.rfpDue}/>}
                 </div>
                 <div style={{fontSize:10,color:"#666",marginBottom:10}}>{selected.eventType}</div>
+                {selected.rfpUrl && (
+                  <a href={selected.rfpUrl} target="_blank" rel="noopener noreferrer"
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:C.denim2,color:"white",borderRadius:6,padding:"8px 12px",marginBottom:10,fontFamily:"'Josefin Sans',sans-serif",fontSize:9,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase",textDecoration:"none"}}>
+                    🔗 View RFP / Event Page →
+                  </a>
+                )}
                 {[["Est. Rooms",selected.estimatedRooms],["Attendees",selected.estimatedAttendees],["Event Dates",selected.dates],["Location",selected.location],["Contact",selected.contactInfo],["Email",selected.contactEmail],["Phone",selected.contactPhone],["Website",selected.contactWebsite]].filter(([,v])=>v).map(([l,v])=>(
                   <div key={l} style={{display:"grid",gridTemplateColumns:"72px 1fr auto",gap:5,alignItems:"center",marginBottom:4}}>
                     <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,letterSpacing:"1px",color:C.denim2,textTransform:"uppercase",fontWeight:700}}>{l}</span>
@@ -847,6 +862,25 @@ export default function App() {
                         {lead.contactPhone && <div>{lead.contactPhone}</div>}
                       </div>
                     )}
+
+                    {/* RFP Link */}
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,color:C.denim2,textTransform:"uppercase",letterSpacing:"1px",fontWeight:700,marginBottom:3}}>RFP Link</div>
+                      <div style={{display:"flex",gap:4}}>
+                        <input
+                          value={lead.rfpUrl || ""}
+                          onChange={e=>savePipeline(pipeline.map(p=>p.id===lead.id?{...p,rfpUrl:e.target.value}:p))}
+                          placeholder="Paste RFP or event URL…"
+                          style={{flex:1,fontSize:9,border:`1px solid ${C.dust}`,borderRadius:4,padding:"4px 7px",fontFamily:"'Libre Franklin',serif",color:C.char,background:C.cotton}}
+                        />
+                        {lead.rfpUrl && (
+                          <a href={lead.rfpUrl} target="_blank" rel="noopener noreferrer"
+                            style={{background:C.denim2,color:"white",borderRadius:4,padding:"4px 8px",fontSize:9,fontWeight:700,textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif",whiteSpace:"nowrap"}}>
+                            Open →
+                          </a>
+                        )}
+                      </div>
+                    </div>
 
                     {/* Notes */}
                     <div>
