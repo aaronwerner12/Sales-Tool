@@ -452,7 +452,7 @@ export default function App() {
                     <strong>{id}:</strong> {s.error}
                   </div>
                 ))}
-                <div style={{fontSize:9,color:"#888",marginTop:5}}>Make sure <strong>ANTHROPIC_API_KEY</strong> is set in Vercel → Project Settings → Environment Variables, then redeploy.</div>
+                <div style={{fontSize:9,color:"#888",marginTop:5}}>Make sure <strong>ANTHROPIC_API_KEY</strong> and <strong>TAVILY_API_KEY</strong> are both set in Vercel → Project Settings → Environment Variables, then redeploy.</div>
               </div>
             )}
 
