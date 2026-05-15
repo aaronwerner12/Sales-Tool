@@ -40,7 +40,7 @@ Your task: ${segPrompt}
 RULES — read carefully:
 - Only include organizations, events, venues, or projects that you know are real and actually exist
 - Use real organization names, real venue names, real company names
-- sourceUrl: use the real official website URL for the organization or event if you know it; otherwise null
+- sourceUrl: ONLY include a URL if you are 100% certain it is the correct official website — you have visited it in training and know exactly what domain it uses. If there is any doubt at all, use null. Wrong URLs are worse than no URL.
 - estimatedRooms and estimatedAttendees: use realistic estimates based on the type/size of event; these are estimates, not invented facts
 - dates: use real scheduled dates if you know them, or a realistic season/timeframe (e.g. "Spring 2026")
 - rfpDue: only if you know a real deadline; otherwise null
@@ -71,7 +71,7 @@ Return ONLY a valid JSON array (no markdown, no explanation):
       "title": null,
       "email": null,
       "phone": null,
-      "website": "real org website or null"
+      "website": "ONLY if you are 100% certain of the correct domain — otherwise null"
     },
     "sv": {
       "meetingName": "event name",
