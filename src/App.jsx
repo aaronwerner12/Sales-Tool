@@ -38,274 +38,12 @@ const SEGMENTS = [
 ];
 const SEG_MAP = Object.fromEntries(SEGMENTS.map(s=>[s.id,s]));
 
-const SYS_PROMPT = `You are a group hotel sales lead generator for Visit McKinney CVB in McKinney, Texas (30 miles north of Dallas, Collin County).
-
-McKINNEY HOTEL INVENTORY:
-- Sheraton McKinney Hotel (187 rooms, Marriott Upper Upscale) — 11,451 sq ft INDOOR meeting space, Throckmorton Ballroom 824 theater/610 banquet/780 reception, 10 breakout rooms, wedding planners. INDOOR ONLY. No outdoor events.
-- Grand Hotel McKinney (45 rooms, historic downtown Upper Upscale) — 4,100 sq ft meeting space, boutique weddings/events
-- TownePlace Suites McKinney (88 rooms, kitchen suites, extended stay, construction housing)
-- SpringHill Suites McKinney/Allen (125 rooms, extended stay)
-- Home2 Suites McKinney (107 rooms, extended stay, pet friendly)
-- WoodSpring Suites McKinney (120 rooms, economy extended stay)
-- Hampton Inn & Suites McKinney (79 rooms, sports teams)
-- Holiday Inn Hotel & Suites McKinney Fairview (99 rooms, 2,614 sq ft meeting)
-- La Quinta McKinney (79 rooms, 1,000 sq ft meeting)
-- Fairfield Inn & Suites McKinney (105 rooms, 961 sq ft meeting)
-- Best Western Plus McKinney (68 rooms)
-- Comfort Suites McKinney-Allen (63 rooms, all suites)
-- Denizen Hotel McKinney (102 rooms, new 2024 boutique)
-Total: ~1,868 rooms, 22 properties
-
-Generate REALISTIC, SPECIFIC group hotel lead profiles that would actually fit McKinney. Focus on the type of group and event — do NOT invent contact names, emails, phones, or websites. Those fields are omitted intentionally.
-
-For the segment requested, generate 4 diverse, high-quality lead profiles. Include a mix of fitScores (some 85+, some 70s, some 60s). Make rfpDue dates realistic — some in the next 30-60 days, some further out, some null.
-
-IMPORTANT: Respond with ONLY a valid JSON array. No markdown. No explanation. No code fences. Start your response with [ and end with ].
-
-JSON schema for each lead:
-{
-  "id": "unique string",
-  "organization": "Descriptive org type name e.g. North Texas Youth Baseball Association",
-  "segment": "the segment id",
-  "eventType": "specific event type",
-  "estimatedRooms": "e.g. 45-60 peak rooms",
-  "estimatedAttendees": "e.g. 200-250",
-  "dates": "e.g. September 2026 or Q3 2026",
-  "rfpDue": "YYYY-MM-DD or null",
-  "location": "general region e.g. Dallas-Fort Worth or Houston",
-  "fitScore": 78,
-  "fitReason": "2-3 sentences on why McKinney and its hotels are a strong fit",
-  "concerns": "1 sentence on any watch-outs",
-  "summary": "1-2 sentence description of the group need",
-  "sv": {
-    "meetingName": "event name for Simpleview",
-    "accountName": "org name",
-    "roomAttendees": "number",
-    "showAttendees": "number",
-    "eeiType": "National or Regional or Local",
-    "repeatBusiness": false
-  }
-}`;
-
-function viability(s) {
-  if (s>=85) return {label:"Excellent", color:C.denim1, bg:"#f0f8f9", bar:C.denim1,  bars:5};
-  if (s>=75) return {label:"Strong",    color:C.denim1, bg:"#f0f8f9", bar:C.mint1,   bars:4};
-  if (s>=65) return {label:"Good",      color:C.sun1,   bg:"#fff8ee", bar:C.sun,     bars:3};
-  if (s>=55) return {label:"Possible",  color:C.myrtle1,bg:"#fff5f5", bar:C.myrtle,  bars:2};
-  return             {label:"Long Shot", color:"#888",   bg:"#f5f5f5", bar:"#ccc",    bars:1};
-}
-
-function ViabilityBar({score}) {
-  const v = viability(score);
-  return (
-    <div style={{display:"flex",alignItems:"center",gap:5}}>
-      <div style={{display:"flex",gap:2}}>
-        {[1,2,3,4,5].map(i=>(
-          <div key={i} style={{width:7,height:14,borderRadius:2,background:i<=v.bars?v.bar:C.dust,transition:"background 0.2s"}}/>
-        ))}
-      </div>
-      <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:v.color,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px"}}>{v.label}</span>
-    </div>
-  );
-}
-
-function DeadlineBadge({rfpDue}) {
-  if (!rfpDue) return null;
-  const today = new Date();
-  const due = new Date(rfpDue);
-  const diff = Math.ceil((due - today) / (1000*60*60*24));
-  let color = C.denim2, bg = "#f0f8f9", prefix = "RFP due:";
-  if (diff < 0)        { color="#aaa"; bg="#f5f5f5"; }
-  else if (diff <= 7)  { color=C.myrtle1; bg="#fff5f5"; prefix="⚡ RFP due:"; }
-  else if (diff <= 30) { color=C.sun1; bg="#fff8ee"; }
-  const label = diff < 0 ? `${rfpDue} (passed)` : diff <= 30 ? `${rfpDue} (${diff}d left)` : rfpDue;
-  return (
-    <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:9,color,background:bg,border:`1px solid ${color}`,borderRadius:10,padding:"2px 8px",fontWeight:700,letterSpacing:"0.5px",whiteSpace:"nowrap"}}>
-      📅 {prefix} {label}
-    </span>
-  );
-}
-
-function copyText(t) {
-  try { navigator.clipboard?.writeText(t); } catch(_) {
-    const e=document.createElement("textarea"); e.value=t;
-    document.body.appendChild(e); e.select();
-    document.execCommand("copy"); document.body.removeChild(e);
-  }
-}
-function CopyBtn({value}) {
-  const [c,setC] = useState(false);
-  return (
-    <button onClick={()=>{copyText(value);setC(true);setTimeout(()=>setC(false),1500);}}
-      style={{background:c?C.denim2:C.cotton,color:c?"white":C.denim2,border:`1px solid ${c?C.denim2:C.mint}`,borderRadius:3,padding:"1px 7px",fontSize:8,cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",transition:"all 0.15s",flexShrink:0}}>
-      {c?"✓ Copied":"Copy"}
-    </button>
-  );
-}
-
-function SvPanel({lead}) {
-  const [tab,setTab] = useState("account");
-  const sv = lead.sv||{};
-  const m = SV_MAP[lead.segment]||SV_MAP.boutique;
-  const hotels = SV_HOTELS[lead.segment]||[];
-  const acc = {"Account":sv.accountName||lead.organization,"Category":m.cat,"Market Segment":m.mkt,"Source Code":m.src,"Status":"Prospect","Organization Profile":lead.summary||""};
-  const lf = {"Meeting Name":sv.meetingName||lead.organization,"Type":m.type,"Market Segment":m.mkt,"Source Code":m.src,"EEI Type":sv.eeiType||"National","Status":"Prospect","Room Attendees":sv.roomAttendees||lead.estimatedRooms||"","Show Attendees":sv.showAttendees||lead.estimatedAttendees||"","Repeat Business":sv.repeatBusiness?"Yes":"No","Hotel Response Due":lead.rfpDue||"","Meeting Requirements":lead.fitReason||"","Comments":lead.concerns||""};
-  const copyAll = obj => copyText(Object.entries(obj).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join("\n"));
-  const Row = ({label,value,hi}) => value ? (
-    <div style={{display:"grid",gridTemplateColumns:"110px 1fr auto",gap:5,alignItems:"start",padding:"5px 0",borderBottom:`1px solid ${C.cotton}`}}>
-      <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,letterSpacing:"1px",color:C.denim2,textTransform:"uppercase",fontWeight:700,paddingTop:1}}>{label}</span>
-      <span style={{fontSize:10,color:hi?C.denim:C.char,fontWeight:hi?"600":"400",background:hi?"#f0f8f9":"transparent",padding:hi?"2px 5px":"0",borderRadius:3,lineHeight:1.4}}>{value}</span>
-      <CopyBtn value={value}/>
-    </div>
-  ) : null;
-  return (
-    <div style={{background:"white",border:`2px solid ${C.denim}`,borderRadius:8,marginTop:12,overflow:"hidden"}}>
-      <div style={{background:C.denim,padding:"8px 13px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:9,color:"white",fontWeight:700,letterSpacing:"2px",textTransform:"uppercase"}}>📋 Simpleview CRM</span>
-        <div style={{display:"flex",gap:3}}>
-          {["account","lead","hotels"].map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:"2px 8px",fontSize:8,letterSpacing:"1px",textTransform:"uppercase",borderRadius:8,fontWeight:700,fontFamily:"'Josefin Sans',sans-serif",cursor:"pointer",border:"none",background:tab===t?"#4c8898":"rgba(255,255,255,0.15)",color:tab===t?"white":"rgba(255,255,255,0.7)"}}>
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div style={{padding:"11px 13px"}}>
-        {tab==="account" && <>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.denim,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>New Account</span>
-            <button onClick={()=>copyAll(acc)} style={{background:C.denim2,color:"white",border:"none",borderRadius:3,padding:"2px 9px",fontSize:8,cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"1px"}}>Copy All</button>
-          </div>
-          {Object.entries(acc).map(([k,v])=><Row key={k} label={k} value={v} hi={["Account","Email","Website"].includes(k)}/>)}
-          <div style={{marginTop:7,padding:"6px 9px",background:"#fff8ee",border:`1px solid ${C.sun}`,borderRadius:4,fontSize:9,color:C.sun1,lineHeight:1.5}}>
-            <strong>In Simpleview:</strong> Accounts → New Account. Assign Sales Manager → Aaron Werner.
-          </div>
-        </>}
-        {tab==="lead" && <>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.denim,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>New Lead</span>
-            <button onClick={()=>copyAll(lf)} style={{background:C.denim2,color:"white",border:"none",borderRadius:3,padding:"2px 9px",fontSize:8,cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"1px"}}>Copy All</button>
-          </div>
-          {Object.entries(lf).map(([k,v])=><Row key={k} label={k} value={v} hi={["Meeting Name","Type","Status","Hotel Response Due"].includes(k)}/>)}
-          <div style={{marginTop:7,padding:"6px 9px",background:"#fff8ee",border:`1px solid ${C.sun}`,borderRadius:4,fontSize:9,color:C.sun1,lineHeight:1.5}}>
-            <strong>In Simpleview:</strong> Leads → New Lead → link to Account. Add Meeting Dates. Send RFP via Facility Search.
-          </div>
-        </>}
-        {tab==="hotels" && <>
-          <div style={{marginBottom:8,fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.denim,fontWeight:700,letterSpacing:"1.5px",textTransform:"uppercase"}}>Suggested Facilities</div>
-          <div style={{fontSize:10,color:"#555",marginBottom:8,lineHeight:1.5}}>Add in Simpleview Facility Search, then send the RFP:</div>
-          {hotels.map((h,i)=>(
-            <div key={h} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 8px",background:C.cotton,border:`1px solid ${C.dust}`,borderRadius:4,marginBottom:3}}>
-              <span style={{fontSize:10,color:C.denim,fontWeight:i===0?"700":"400"}}>{i===0?"★ ":""}{h}</span>
-              <CopyBtn value={h}/>
-            </div>
-          ))}
-        </>}
-      </div>
-    </div>
-  );
-}
-
-const SEG_PROMPTS = {
-  sports: `Generate 6 realistic sports group hotel leads for Visit McKinney CVB (McKinney, TX — 30 miles north of Dallas).
-
-Focus on: youth and adult sports tournaments needing hotel room blocks. Examples:
-- Youth baseball/softball tournament, 40-80 teams, needing 60-120 rooms for 3-4 nights
-- Club volleyball tournament at a DFW sports facility, 200-400 players
-- Youth soccer tournament, families needing 50-100 rooms
-- Adult recreational basketball/softball league tournament
-- Gymnastics or cheer/dance competition, 300-500 attendees
-- AAU basketball event, 100-200 rooms needed
-- Youth swim meet at local aquatic center
-McKinney hotels suited for sports: Hampton Inn (79 rooms), Holiday Inn (99), La Quinta (79), Fairfield Inn (105), Home2 Suites (107), Best Western Plus (68), Comfort Suites (63). Total ~1,868 rooms city-wide.`,
-
-  corporate: `Generate 6 realistic corporate group hotel leads for Visit McKinney CVB (McKinney, TX — 30 miles north of Dallas).
-
-Focus on: DFW-area and Texas companies needing meeting space + room block. Examples:
-- Technology company annual sales kickoff, 100-200 employees, 2-3 nights
-- Healthcare company regional training, 50-80 attendees
-- Financial services firm leadership retreat, 20-40 executives
-- Insurance company annual meeting, 80-120 attendees
-- Manufacturing company dealer/partner conference, 60-100 rooms
-- Law firm CLE training event, 40-60 attorneys
-- Toyota (HQ in Plano) or Raytheon (McKinney) department offsite
-McKinney primary corporate venue: Sheraton McKinney (187 rooms, 11,451 sq ft meeting space, 10 breakout rooms).`,
-
-  construction: `Generate 6 realistic construction/project housing leads for Visit McKinney CVB (McKinney, TX — Collin County, fast-growing suburb north of Dallas).
-
-Focus on: project crews needing extended stay hotel housing near active job sites. Examples:
-- Data center construction project (multiple tech companies building in Collin County)
-- TxDOT highway expansion crews (US-380, SH-121, SH-5 in Collin County)
-- Commercial/retail development construction — new shopping centers, offices
-- Utility or telecom infrastructure project crews
-- Semiconductor or manufacturing facility construction
-- Hospital or school construction project
-- Corporate campus build-out (Toyota, Raytheon, etc. expansions)
-Extended stay hotels: TownePlace Suites (88 rooms, kitchen suites), SpringHill Suites (125), Home2 Suites (107), WoodSpring Suites (120 economy).`,
-
-  weddings: `Generate 6 realistic wedding room block leads for Visit McKinney CVB (McKinney, TX — 30 miles north of Dallas).
-
-Focus on: couples or wedding planners needing hotel room blocks for out-of-town guests. Examples:
-- Spring/fall 2026 or 2027 wedding at McKinney venue, 50-120 guests needing rooms
-- Wedding at a McKinney historic venue, vineyard, or barn needing hotel block
-- Destination wedding for couple from Houston, Austin, or out of state choosing DFW
-- Wedding planner managing a large McKinney wedding needing 3+ hotels
-- Rehearsal dinner + wedding weekend block at Sheraton or Grand Hotel McKinney
-- Bridal party buyout of boutique hotel block
-Wedding venues: Sheraton McKinney (ballroom, certified planners), Grand Hotel McKinney (historic downtown boutique), Denizen Hotel.`,
-
-  reunions: `Generate 6 realistic family reunion and group gathering leads for Visit McKinney CVB (McKinney, TX — 30 miles north of Dallas).
-
-Focus on: family reunions and group gatherings needing hotel room blocks. Examples:
-- Texas family reunion, 50-150 family members, 3-night weekend stay
-- African-American family reunion (large Texas tradition), 80-200 attendees
-- Military reunion or veterans group, 40-80 attendees
-- High school or college alumni reunion, 60-120 rooms
-- Church group or retreat weekend, 40-100 rooms
-- Quinceañera or large family celebration with out-of-town guests
-- Multi-generational family vacation group, 20-50 rooms
-Hotels suited: Sheraton (banquet space for group dinner), Hampton Inn, Holiday Inn, Home2 Suites, Fairfield Inn.`,
-
-  boutique: `Generate 6 realistic boutique conference and association meeting leads for Visit McKinney CVB (McKinney, TX — 30 miles north of Dallas).
-
-Focus on: small professional associations, niche conferences, and regional meetings. Examples:
-- Texas municipal government or city managers association meeting, 80-150 attendees
-- Healthcare or medical professional association regional conference, 100-200 attendees
-- Real estate or homebuilder association annual meeting, 80-150 rooms
-- Education association or superintendent conference, 60-120 attendees
-- Texas restaurant or hospitality industry association meeting
-- Nonprofit leadership summit or board retreat, 40-80 rooms
-- Technology or cybersecurity industry conference, 100-200 attendees
-- Law enforcement or public safety conference
-Primary venue: Sheraton McKinney Hotel (11,451 sq ft meeting space, 824-seat ballroom, 10 breakout rooms). Also Grand Hotel McKinney for smaller boutique groups.`,
-};
 
 async function generateLeadsForSegment(segId) {
-  const segSpecific = SEG_PROMPTS[segId] || SEG_PROMPTS.boutique;
-
-  const prompt = `${segSpecific}
-
-Generate exactly 4 leads. Today is May 2026. Use realistic Texas organization names, real-sounding contacts, and genuine-feeling details. Include:
-- Mix of fitScores: 1 at 85-90, 2 at 70-80, 1 at 58-68
-- RFP deadlines: 1 urgent (within 30 days), 1 in 60-90 days, 2 null
-- Varied locations: some DFW, some Houston/Austin, some national orgs
-
-Return ONLY a valid JSON array. Start with [ and end with ]. No markdown, no explanation, no code fences.
-
-Each object must have these exact keys:
-id, organization, segment, eventType, estimatedRooms, estimatedAttendees, dates, rfpDue, location, fitScore, fitReason, concerns, contactInfo, contactEmail, contactPhone, contactWebsite, sourceUrl, summary, sv
-
-The sv object must have: meetingName, accountName, contactName, roomAttendees, showAttendees, eeiType, repeatBusiness`;
-
   const res = await fetch("/api/generate-leads", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4000,
-      system: SYS_PROMPT,
-      messages: [{ role: "user", content: prompt }],
-    }),
+    body: JSON.stringify({ segmentId: segId }),
   });
 
   if (!res.ok) {
@@ -330,40 +68,17 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
   try {
     parsed = JSON.parse(jsonStr);
   } catch(e) {
-    throw new Error(`JSON parse failed: ${e.message}. Raw: ${jsonStr.slice(0, 200)}`);
+    throw new Error(`JSON parse failed: ${e.message}`);
   }
 
   const ts = Date.now();
   return parsed.map((l, i) => ({
     ...l,
-    id: `${segId}-${ts}-${i}`,
+    id: l.id || `${segId}-${ts}-${i}`,
     segment: l.segment || segId,
     foundAt: new Date().toLocaleTimeString(),
-    rfpUrl: null,
+    rfpUrl: l.sourceUrl || null,
   }));
-}
-
-function buildSearchQuery(lead) {
-  const base = `${lead.organization} ${lead.eventType}`;
-  if (lead.segment === "sports")       return `${base} tournament registration hotel room block 2026`;
-  if (lead.segment === "corporate")    return `${base} annual meeting conference 2026`;
-  if (lead.segment === "construction") return `${base} project housing extended stay`;
-  if (lead.segment === "weddings")     return `${base} wedding venue McKinney Texas`;
-  if (lead.segment === "reunions")     return `${base} reunion registration 2026`;
-  return `${base} conference meeting RFP 2026`;
-}
-
-async function searchRfpLink(lead) {
-  try {
-    const res = await fetch("/api/search-rfp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: buildSearchQuery(lead) }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.results?.[0]?.url || null;
-  } catch { return null; }
 }
 
 export default function App() {
@@ -440,19 +155,6 @@ export default function App() {
         return merged;
       });
       setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: null, retryIn: null } }));
-
-      // Enrich each lead with a real RFP link in the background
-      newLeads.forEach((lead, i) => {
-        setTimeout(async () => {
-          const url = await searchRfpLink(lead);
-          if (!url) return;
-          setLeads(prev => {
-            const updated = prev.map(l => l.id === lead.id ? { ...l, rfpUrl: url } : l);
-            saveCache(updated);
-            return updated;
-          });
-        }, i * 1200);
-      });
     } catch(e) {
       console.error(seg.id, e);
       const isRateLimit = e.message.includes("429") || e.message.includes("rate_limit");
@@ -726,9 +428,9 @@ export default function App() {
             {visibleLeads.length === 0 && isAnyLoading && (
               <div style={{textAlign:"center",padding:"40px 20px"}}>
                 <div style={{width:40,height:40,border:`3px solid ${C.mint}`,borderTopColor:C.denim2,borderRadius:"50%",animation:"spin 1s linear infinite",margin:"0 auto 14px"}}/>
-                <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:11,color:C.denim,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:4}}>Generating leads…</div>
+                <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:11,color:C.denim,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",marginBottom:4}}>Searching real sources…</div>
                 <div style={{fontSize:10,color:"#888"}}>{doneCount} of {SEGMENTS.length} segments complete</div>
-                <div style={{fontSize:9,color:"#aaa",marginTop:4}}>Leads will appear as each segment finishes</div>
+                <div style={{fontSize:9,color:"#aaa",marginTop:4}}>Searching the web for real RFPs and events — leads appear as each segment finishes</div>
               </div>
             )}
 
