@@ -56,36 +56,30 @@ McKINNEY HOTEL INVENTORY:
 - Denizen Hotel McKinney (102 rooms, new 2024 boutique)
 Total: ~1,868 rooms, 22 properties
 
-Generate REALISTIC, SPECIFIC group hotel leads that would actually fit McKinney. Use real organization types, realistic event details, and plausible contact info. Make these feel like real prospecting leads a CVB sales manager would pursue.
+Generate REALISTIC, SPECIFIC group hotel lead profiles that would actually fit McKinney. Focus on the type of group and event — do NOT invent contact names, emails, phones, or websites. Those fields are omitted intentionally.
 
-For the segment requested, generate 6 diverse, high-quality leads. Include a mix of fitScores (some 85+, some 70s, some 60s). Make rfpDue dates realistic — some in the next 30-60 days, some further out, some null.
+For the segment requested, generate 4 diverse, high-quality lead profiles. Include a mix of fitScores (some 85+, some 70s, some 60s). Make rfpDue dates realistic — some in the next 30-60 days, some further out, some null.
 
 IMPORTANT: Respond with ONLY a valid JSON array. No markdown. No explanation. No code fences. Start your response with [ and end with ].
 
 JSON schema for each lead:
 {
   "id": "unique string",
-  "organization": "Real-sounding org name",
+  "organization": "Descriptive org type name e.g. North Texas Youth Baseball Association",
   "segment": "the segment id",
   "eventType": "specific event type",
   "estimatedRooms": "e.g. 45-60 peak rooms",
   "estimatedAttendees": "e.g. 200-250",
   "dates": "e.g. September 2026 or Q3 2026",
   "rfpDue": "YYYY-MM-DD or null",
-  "location": "where org is based",
+  "location": "general region e.g. Dallas-Fort Worth or Houston",
   "fitScore": 78,
   "fitReason": "2-3 sentences on why McKinney and its hotels are a strong fit",
   "concerns": "1 sentence on any watch-outs",
-  "contactInfo": "Name, Title",
-  "contactEmail": "realistic email",
-  "contactPhone": "phone number",
-  "contactWebsite": "website URL",
-  "sourceUrl": "https://example.com",
   "summary": "1-2 sentence description of the group need",
   "sv": {
     "meetingName": "event name for Simpleview",
     "accountName": "org name",
-    "contactName": "first last",
     "roomAttendees": "number",
     "showAttendees": "number",
     "eeiType": "National or Regional or Local",
@@ -154,7 +148,7 @@ function SvPanel({lead}) {
   const sv = lead.sv||{};
   const m = SV_MAP[lead.segment]||SV_MAP.boutique;
   const hotels = SV_HOTELS[lead.segment]||[];
-  const acc = {"Account":sv.accountName||lead.organization,"Category":m.cat,"Market Segment":m.mkt,"Source Code":m.src,"Status":"Prospect","Website":lead.contactWebsite||"","Email":lead.contactEmail||"","Organization Profile":lead.summary||""};
+  const acc = {"Account":sv.accountName||lead.organization,"Category":m.cat,"Market Segment":m.mkt,"Source Code":m.src,"Status":"Prospect","Organization Profile":lead.summary||""};
   const lf = {"Meeting Name":sv.meetingName||lead.organization,"Type":m.type,"Market Segment":m.mkt,"Source Code":m.src,"EEI Type":sv.eeiType||"National","Status":"Prospect","Room Attendees":sv.roomAttendees||lead.estimatedRooms||"","Show Attendees":sv.showAttendees||lead.estimatedAttendees||"","Repeat Business":sv.repeatBusiness?"Yes":"No","Hotel Response Due":lead.rfpDue||"","Meeting Requirements":lead.fitReason||"","Comments":lead.concerns||""};
   const copyAll = obj => copyText(Object.entries(obj).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join("\n"));
   const Row = ({label,value,hi}) => value ? (
@@ -776,7 +770,7 @@ export default function App() {
                     🔗 View RFP / Event Page →
                   </a>
                 )}
-                {[["Est. Rooms",selected.estimatedRooms],["Attendees",selected.estimatedAttendees],["Event Dates",selected.dates],["Location",selected.location],["Contact",selected.contactInfo],["Email",selected.contactEmail],["Phone",selected.contactPhone],["Website",selected.contactWebsite]].filter(([,v])=>v).map(([l,v])=>(
+                {[["Est. Rooms",selected.estimatedRooms],["Attendees",selected.estimatedAttendees],["Event Dates",selected.dates],["Location",selected.location]].filter(([,v])=>v).map(([l,v])=>(
                   <div key={l} style={{display:"grid",gridTemplateColumns:"72px 1fr auto",gap:5,alignItems:"center",marginBottom:4}}>
                     <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,letterSpacing:"1px",color:C.denim2,textTransform:"uppercase",fontWeight:700}}>{l}</span>
                     <span style={{fontSize:10,color:C.char,wordBreak:"break-word"}}>{v}</span>
@@ -792,12 +786,6 @@ export default function App() {
                     <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,letterSpacing:"2px",color:C.sun1,textTransform:"uppercase",fontWeight:700,marginBottom:4}}>Watch Out</div>
                     <div style={{fontSize:10,color:"#444",lineHeight:1.7}}>{selected.concerns}</div>
                   </div>
-                )}
-                {selected.sourceUrl && (
-                  <a href={selected.sourceUrl} target="_blank" rel="noopener noreferrer"
-                    style={{fontSize:9,color:C.denim2,fontWeight:700,fontFamily:"'Josefin Sans',sans-serif",textTransform:"uppercase",letterSpacing:"1px",display:"inline-block",marginBottom:10}}>
-                    View Source →
-                  </a>
                 )}
                 <div style={{borderTop:`2px solid ${C.dust}`,paddingTop:10,marginTop:4}}>
                   {pipeline.find(p=>p.id===selected.id) ? (
@@ -889,15 +877,6 @@ export default function App() {
                         ))}
                       </div>
                     </div>
-
-                    {/* Contact */}
-                    {(lead.contactInfo || lead.contactEmail) && (
-                      <div style={{background:C.cotton,borderRadius:5,padding:"6px 8px",marginBottom:8,fontSize:9,color:"#555"}}>
-                        {lead.contactInfo && <div style={{fontWeight:600,marginBottom:2}}>{lead.contactInfo}</div>}
-                        {lead.contactEmail && <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><span>{lead.contactEmail}</span><CopyBtn value={lead.contactEmail}/></div>}
-                        {lead.contactPhone && <div>{lead.contactPhone}</div>}
-                      </div>
-                    )}
 
                     {/* RFP Link */}
                     <div style={{marginBottom:8}}>
