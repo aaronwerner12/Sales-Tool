@@ -96,11 +96,12 @@ Below are REAL web search results. Extract group hotel lead opportunities from t
 
 STRICT RULES:
 - Only include organizations and events explicitly mentioned in the search results
-- Only include data (dates, attendee counts, room counts) that is stated in the results — use null if not found
+- Only include data (dates, attendee counts, room counts, contact info) that is explicitly stated in the results — use null if not found
 - Use the actual URL from the search result as sourceUrl
 - Do not invent, guess, or add information not in the results
 - If results contain few leads, return fewer items — accuracy over quantity
 - fitReason and concerns are YOUR analysis of McKinney fit based on the hotel inventory above
+- For contact fields: only populate if a real name/email/phone/website appears in the search results for that specific organization; otherwise use null
 
 SEARCH RESULTS:
 ${resultsText}
@@ -121,6 +122,13 @@ Return ONLY a valid JSON array (no markdown, no explanation):
     "concerns": "1 sentence on watch-outs or null",
     "summary": "1-2 sentences summarizing the real opportunity",
     "sourceUrl": "actual URL from search results",
+    "contact": {
+      "name": "full name from results or null",
+      "title": "job title from results or null",
+      "email": "email address from results or null",
+      "phone": "phone number from results or null",
+      "website": "organization website from results or null"
+    },
     "sv": {
       "meetingName": "event name",
       "accountName": "org name",

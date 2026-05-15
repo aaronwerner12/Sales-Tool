@@ -549,6 +549,35 @@ export default function App() {
                     <CopyBtn value={v}/>
                   </div>
                 ))}
+
+                {/* Contact Info */}
+                <div style={{background:"#f0f4f7",border:`1px solid ${C.denim2}`,borderRadius:6,padding:"9px 11px",marginTop:10,marginBottom:7}}>
+                  <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,letterSpacing:"2px",color:C.denim,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Contact Info</div>
+                  {(() => {
+                    const c = selected.contact || {};
+                    const hasAny = c.name || c.email || c.phone || c.website;
+                    if (!hasAny) return (
+                      <div style={{fontSize:9,color:"#aaa",fontStyle:"italic"}}>None found in search results</div>
+                    );
+                    return (
+                      <div>
+                        {[["Name", c.name],["Title", c.title],["Email", c.email],["Phone", c.phone],["Website", c.website]].filter(([,v])=>v).map(([l,v])=>(
+                          <div key={l} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:5,alignItems:"center",marginBottom:4}}>
+                            <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,letterSpacing:"1px",color:C.denim2,textTransform:"uppercase",fontWeight:700}}>{l}</span>
+                            {l === "Email" ? (
+                              <a href={`mailto:${v}`} style={{fontSize:9,color:C.denim2,wordBreak:"break-all"}}>{v}</a>
+                            ) : l === "Website" ? (
+                              <a href={v} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:C.denim2,wordBreak:"break-all"}}>{v}</a>
+                            ) : (
+                              <span style={{fontSize:9,color:C.char,wordBreak:"break-word"}}>{v}</span>
+                            )}
+                            <CopyBtn value={v}/>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <div style={{background:"#f0f8f9",border:`1px solid ${C.mint}`,borderRadius:6,padding:"9px 11px",marginTop:10,marginBottom:7}}>
                   <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,letterSpacing:"2px",color:C.denim1,textTransform:"uppercase",fontWeight:700,marginBottom:4}}>Why McKinney Fits</div>
                   <div style={{fontSize:10,color:"#444",lineHeight:1.7}}>{selected.fitReason}</div>
