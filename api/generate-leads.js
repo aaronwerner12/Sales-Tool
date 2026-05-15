@@ -12,12 +12,12 @@ const HOTEL_CONTEXT = `McKinney, TX (30 miles north of Dallas) hotel inventory:
 Total: ~1,868 rooms across 22 properties`;
 
 const SEGMENT_PROMPTS = {
-  sports: `Find 5 real youth or amateur sports tournaments happening in Texas or the DFW metro area in 2025-2026 that would require hotel room blocks. Focus on baseball, softball, volleyball, basketball, soccer, and lacrosse tournaments. Include real sanctioning bodies and tournament series (USSSA, Perfect Game, AAU, USA Volleyball, NTSSL, etc.) and real venues in Collin County or nearby.`,
-  corporate: `Find 5 real corporate conferences, annual meetings, or sales kickoffs planned for Texas / DFW in 2025-2026 that would need hotel room blocks. Include real companies with major Texas or DFW presences or real industry associations holding annual conferences in DFW.`,
-  construction: `Find 5 real large construction or development projects underway or breaking ground in Collin County / North Texas in 2025-2026 that would need extended-stay hotel housing for workers. Include real projects like data centers, manufacturing plants, corporate campuses, or major infrastructure.`,
-  weddings: `Find 5 real wedding venues in McKinney, Allen, Frisco, or nearby North Texas that host weddings requiring hotel room blocks for out-of-town guests in 2025-2026. Include real venue names that exist in the area.`,
-  reunions: `Find 5 real high school class reunions, family reunions, or military/alumni reunions planned in Texas or DFW in 2025-2026 that would need hotel room blocks. Reference real Texas high schools, military units, or universities with DFW alumni chapters.`,
-  boutique: `Find 5 real Texas statewide associations or professional organizations holding their annual conference in DFW in 2025-2026. Include real organizations like Texas Medical Association, Texas Bar Association, Texas Association of School Administrators, Texas Society of CPAs, Texas Restaurant Association, Texas Realtors, etc.`,
+  sports: `Identify 5 real youth or amateur sports ORGANIZATIONS or tournament SERIES that travel to host cities and need hotel room blocks — things like USSSA Texas baseball tournaments, Perfect Game showcases, AAU basketball circuits, USA Volleyball qualifiers, NTSSL soccer tournaments. These are groups actively looking for a host destination in North Texas / DFW. Do NOT list hotels, venues, or businesses already in McKinney.`,
+  corporate: `Identify 5 real EXTERNAL companies or industry associations that hold annual conferences, sales kickoffs, or leadership summits and need a host hotel in the DFW area — e.g. a company headquartered elsewhere bringing 200 employees to DFW, or a Texas statewide trade association rotating its annual meeting across Texas cities. Do NOT list companies already headquartered in McKinney or venues/hotels.`,
+  construction: `Identify 5 real large construction or infrastructure projects that are COMING TO Collin County / North Texas and will need extended-stay hotel housing for out-of-town workers — e.g. a semiconductor fab, data center campus, highway project, or corporate headquarters under construction. The workers need somewhere to stay for months. Do NOT list McKinney businesses or existing hotels.`,
+  weddings: `Identify 5 real scenarios where a couple or wedding planner is seeking hotel room blocks for out-of-town wedding guests in the McKinney / North Texas area. Focus on the ROOM BLOCK NEED — couples getting married at venues in the area who need nearby hotel blocks. Reference real wedding venue names in McKinney or Allen that regularly send guests to nearby hotels. The LEAD is the couple/planner, not the venue.`,
+  reunions: `Identify 5 real organizations — Texas high school graduating classes, military units, family associations, or university alumni chapters — that hold annual or multi-year reunions and travel to a host city, needing hotel room blocks. These groups are looking for a destination, not already based in McKinney. Reference real Texas schools, bases, or universities.`,
+  boutique: `Identify 5 real Texas statewide professional associations or nonprofits that rotate their annual conference across Texas cities and are a fit for McKinney — e.g. Texas Medical Association, Texas Bar Association, Texas Association of School Administrators, Texas Society of CPAs, Texas Restaurant Association, Texas Realtors. These organizations are actively seeking a host hotel/city. Do NOT list organizations already based in McKinney.`,
 };
 
 async function tavilySearch(apiKey, query) {
@@ -88,13 +88,15 @@ ${HOTEL_CONTEXT}
 Your task: ${segPrompt}
 
 RULES:
+- Every lead must be an EXTERNAL organization seeking a host hotel/destination — groups that need to come TO McKinney, not businesses or hotels already there
+- Never include hotels, venues, or any business already located in McKinney as a lead
 - Only include organizations and events you know are real
 - estimatedRooms and estimatedAttendees: realistic estimates based on event type/size
 - dates: real scheduled dates if known, or realistic season (e.g. "Spring 2026")
 - rfpDue: only if you know a real deadline; otherwise null
-- location: city, TX
-- fitScore: 0-100 rating of McKinney hotel fit
-- fitReason: 2-3 sentences specific to this lead
+- location: where the organization is based or where it typically operates, NOT McKinney
+- fitScore: 0-100 rating of how well McKinney's hotel inventory fits their needs
+- fitReason: 2-3 sentences on why McKinney is a good fit for this group
 - concerns: 1 honest sentence or null
 - Do NOT include any URLs or contact info — those will be looked up separately
 - Return exactly 5 leads
