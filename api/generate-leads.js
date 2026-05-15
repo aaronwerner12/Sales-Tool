@@ -1,56 +1,127 @@
 const SEGMENT_QUERIES = {
   sports: [
-    "Texas youth baseball tournament 2026 DFW registration teams",
-    "Texas youth volleyball basketball soccer tournament 2026 Collin County Allen Frisco McKinney",
-    "USSSA Perfect Game Texas tournament 2026 North Texas",
+    "Texas youth baseball tournament 2026 DFW teams registration",
+    "Texas youth volleyball basketball soccer tournament 2026 North Texas",
+    "USSSA Perfect Game Texas baseball tournament 2026",
   ],
   corporate: [
     "Texas statewide association annual conference 2026 Dallas Fort Worth",
-    "North Texas corporate summit meeting conference 2026 Plano Allen McKinney",
-    "Texas industry conference annual meeting 2026 DFW hotel",
+    "North Texas corporate conference summit 2026 annual meeting",
+    "Texas industry conference annual meeting 2026 DFW",
   ],
   construction: [
-    "Collin County McKinney Texas commercial construction project 2026 permit approved",
-    "North Texas data center warehouse manufacturing facility 2026 construction groundbreaking",
+    "Collin County McKinney Texas commercial construction project 2026",
+    "North Texas data center warehouse manufacturing facility 2026 groundbreaking",
     "McKinney Allen Frisco Texas corporate campus expansion 2026",
   ],
   weddings: [
-    "McKinney Texas wedding venue 2026 reception",
-    "North Texas DFW wedding 2026 venue booking",
+    "McKinney Texas wedding venue 2026 reception booking",
+    "North Texas DFW wedding 2026 venue",
     "site:theknot.com McKinney Texas wedding 2026",
   ],
   reunions: [
-    "Texas family reunion 2026 gathering registration",
-    "Texas high school class reunion 2026 DFW",
-    "Texas military alumni reunion 2026 annual gathering",
+    "Texas family reunion 2026 gathering registration hotel",
+    "Texas high school class reunion 2026 DFW annual",
+    "Texas military alumni reunion 2026 gathering",
   ],
   boutique: [
-    "Texas nonprofit association annual conference 2026 DFW meeting",
-    "Texas medical dental legal education professional conference 2026",
-    "Texas chamber of commerce trade association conference 2026 annual",
+    "Texas nonprofit association annual conference 2026 DFW",
+    "Texas medical dental legal professional conference 2026 annual",
+    "Texas chamber commerce trade association conference 2026",
   ],
 };
 
-const HOTEL_CONTEXT = `McKinney, TX (30 miles north of Dallas) hotel inventory:
-- Sheraton McKinney Hotel: 187 rooms, 11,451 sq ft INDOOR meeting space, ballroom seats 824 theater / 610 banquet, 10 breakout rooms
-- Grand Hotel McKinney: 45 rooms, historic downtown, 4,100 sq ft meeting space, boutique weddings
-- Hampton Inn & Suites McKinney: 79 rooms (sports teams)
-- Holiday Inn Hotel & Suites McKinney Fairview: 99 rooms, 2,614 sq ft meeting
-- TownePlace Suites McKinney: 88 rooms, kitchen suites, extended stay
-- SpringHill Suites McKinney/Allen: 125 rooms, extended stay
-- Home2 Suites McKinney: 107 rooms, extended stay, pet friendly
-- WoodSpring Suites McKinney: 120 rooms, economy extended stay
-- La Quinta McKinney: 79 rooms, Fairfield Inn: 105 rooms, Best Western Plus: 68 rooms
-- Comfort Suites McKinney-Allen: 63 rooms, Denizen Hotel McKinney: 102 rooms (new 2024 boutique)
-Total: ~1,868 rooms across 22 properties`;
+// Keywords that boost fitScore
+const SCORE_KEYWORDS = {
+  high: ["mckinney","collin county","allen","frisco","plano","north texas","dfw","dallas fort worth"],
+  med:  ["texas","2026","tournament","conference","annual","hotel","room block","registration"],
+  low:  ["2025","event","meeting","group"],
+};
+
+const SEG_EVENT_TYPES = {
+  sports:       "Sports Tournament",
+  corporate:    "Corporate Conference",
+  construction: "Construction Project",
+  weddings:     "Wedding",
+  reunions:     "Reunion",
+  boutique:     "Association Conference",
+};
+
+const FIT_REASONS = {
+  sports:       "McKinney has 5 sports-friendly hotels totaling 430+ rooms including Hampton Inn and Home2 Suites, ideal for team blocks. Location 30 miles north of Dallas puts teams near major Texas sports hubs.",
+  corporate:    "The Sheraton McKinney offers 11,451 sq ft of indoor meeting space with a ballroom seating 824 — sufficient for most corporate conferences. Multiple upscale options for attendee room blocks.",
+  construction: "TownePlace, SpringHill, Home2, and WoodSpring Suites offer 420+ extended-stay rooms with kitchen suites and weekly rates, perfectly suited for long-term construction crews.",
+  weddings:     "Grand Hotel McKinney (historic downtown boutique) and Sheraton McKinney anchor the wedding market, with 200+ rooms across nearby overflow hotels for out-of-town guests.",
+  reunions:     "Sheraton McKinney ballroom seats 824 for large gatherings; Hampton Inn and Holiday Inn offer affordable room blocks. Suburban McKinney location is accessible from across Texas.",
+  boutique:     "Sheraton McKinney's 11,451 sq ft of meeting space with 10 breakout rooms suits statewide association conferences. Grand Hotel and Denizen offer boutique overflow options.",
+};
+
+function scoreFromContent(title, content, segmentId) {
+  const text = `${title} ${content}`.toLowerCase();
+  let score = 50;
+  for (const kw of SCORE_KEYWORDS.high) { if (text.includes(kw)) score += 12; }
+  for (const kw of SCORE_KEYWORDS.med)  { if (text.includes(kw)) score += 5; }
+  for (const kw of SCORE_KEYWORDS.low)  { if (text.includes(kw)) score += 2; }
+  // Segment-specific boosts
+  if (segmentId === "sports"       && /tournament|team|bracket|registration/.test(text)) score += 10;
+  if (segmentId === "corporate"    && /conference|summit|meeting|annual/.test(text))     score += 10;
+  if (segmentId === "construction" && /construction|project|development|groundbreaking/.test(text)) score += 10;
+  if (segmentId === "weddings"     && /wedding|venue|reception|bridal/.test(text))       score += 10;
+  if (segmentId === "reunions"     && /reunion|alumni|gathering|class of/.test(text))    score += 10;
+  if (segmentId === "boutique"     && /association|nonprofit|conference|annual/.test(text)) score += 10;
+  return Math.min(98, Math.max(35, score));
+}
+
+function extractNumbers(text) {
+  const roomMatch = text.match(/(\d[\d,]*)\s*(room|rooms|hotel room)/i);
+  const attendeeMatch = text.match(/(\d[\d,]*)\s*(attendee|attendees|participant|people|player|team|guest)/i);
+  const teamMatch = text.match(/(\d[\d,]*)\s*team/i);
+  return {
+    rooms: roomMatch ? roomMatch[1].replace(/,/g, '') : null,
+    attendees: attendeeMatch
+      ? attendeeMatch[1].replace(/,/g, '')
+      : teamMatch ? String(parseInt(teamMatch[1].replace(/,/g, '')) * 15) : null,
+  };
+}
+
+function extractDates(text) {
+  const m = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)[,\s]+\d{1,2}(?:[–\-]\d{1,2})?,?\s*202[5-9]/i);
+  return m ? m[0].trim() : null;
+}
+
+function extractOrganization(title, url) {
+  // Try to get org name from title — strip generic suffixes
+  let name = title
+    .replace(/\s*[-|:–]\s*.*/,'')   // strip after dash/colon
+    .replace(/\s*(registration|hotel|book|reserve|2026|2025)\s*/gi, '')
+    .trim();
+  if (name.length < 4) {
+    // Fall back to domain name
+    try {
+      const host = new URL(url).hostname.replace(/^www\./,'').split('.')[0];
+      name = host.charAt(0).toUpperCase() + host.slice(1);
+    } catch { name = title.slice(0, 60); }
+  }
+  return name.slice(0, 80);
+}
+
+function extractContact(content) {
+  const emailMatch  = content.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  const phoneMatch  = content.match(/(\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4})/);
+  const websiteMatch = content.match(/https?:\/\/[^\s"'<>]+\.[a-z]{2,}(?:\/[^\s"'<>]*)?/i);
+  return {
+    name:    null,
+    title:   null,
+    email:   emailMatch  ? emailMatch[0]  : null,
+    phone:   phoneMatch  ? phoneMatch[0]  : null,
+    website: websiteMatch ? websiteMatch[0] : null,
+  };
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const tavilyKey = process.env.TAVILY_API_KEY;
-
-  if (!anthropicKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set' });
   if (!tavilyKey) return res.status(500).json({ error: 'TAVILY_API_KEY not set' });
 
   const { segmentId } = req.body;
@@ -58,7 +129,6 @@ export default async function handler(req, res) {
 
   const queries = SEGMENT_QUERIES[segmentId] || SEGMENT_QUERIES.boutique;
 
-  // Search Tavily for real results
   const searchResults = await Promise.all(
     queries.map(q =>
       fetch('https://api.tavily.com/search', {
@@ -90,83 +160,48 @@ export default async function handler(req, res) {
     return res.json({ content: [{ type: 'text', text: '[]' }] });
   }
 
-  const resultsText = allResults
-    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\nContent: ${r.content || ''}`)
-    .join('\n\n---\n\n');
+  const ts = Date.now();
+  const leads = allResults
+    .filter(r => r.title && r.url)
+    .slice(0, 10)
+    .map((r, i) => {
+      const content = r.content || '';
+      const nums    = extractNumbers(`${r.title} ${content}`);
+      const contact = extractContact(content);
+      const score   = scoreFromContent(r.title, content, segmentId);
 
-  const prompt = `You are a group hotel sales analyst for Visit McKinney CVB in McKinney, Texas.
+      // Extract location
+      const locMatch = content.match(/\b([A-Z][a-z]+(?: [A-Z][a-z]+)*),\s*(TX|Texas|Oklahoma|Louisiana|Arkansas|New Mexico)\b/);
+      const location = locMatch ? locMatch[0] : 'Texas';
 
-${HOTEL_CONTEXT}
+      return {
+        id: `${segmentId}-${ts}-${i}`,
+        organization: extractOrganization(r.title, r.url),
+        segment: segmentId,
+        eventType: SEG_EVENT_TYPES[segmentId] || 'Event',
+        estimatedRooms: nums.rooms,
+        estimatedAttendees: nums.attendees,
+        dates: extractDates(`${r.title} ${content}`),
+        rfpDue: null,
+        location,
+        fitScore: score,
+        fitReason: FIT_REASONS[segmentId],
+        concerns: null,
+        summary: content.slice(0, 200).trim() || r.title,
+        sourceUrl: r.url,
+        rfpUrl: r.url,
+        contact,
+        sv: {
+          meetingName: r.title.slice(0, 80),
+          accountName: extractOrganization(r.title, r.url),
+          roomAttendees: nums.rooms,
+          showAttendees: nums.attendees,
+          eeiType: 'Regional',
+          repeatBusiness: false,
+        },
+        foundAt: new Date().toLocaleTimeString(),
+      };
+    });
 
-The search results below contain real events, tournaments, conferences, construction projects, weddings, or reunions happening in Texas or the DFW area. Your job is to identify each distinct event or organization and evaluate it as a potential group hotel lead for McKinney's hotel inventory.
-
-RULES:
-- Treat every named event or organization in the results as a potential lead worth evaluating
-- Use the exact name of the event or organization from the results
-- estimatedRooms: if room count is stated use it; otherwise estimate based on attendee count (roughly 1 room per 2 attendees) and note it is estimated; use null only if no attendee info at all
-- estimatedAttendees: use what is stated; if a range is given use midpoint; null if unknown
-- dates: use what is in the results; null if not found
-- rfpDue: use YYYY-MM-DD only if an explicit deadline appears in the results; otherwise null
-- location: city/state from the results
-- sourceUrl: the actual URL from the result where this event was found
-- contact: only populate fields that explicitly appear in the results for this org — no guessing
-- fitScore: rate 0-100 how well McKinney's hotel inventory fits based on size, type, and proximity
-- fitReason: 2-3 sentences on why McKinney fits
-- concerns: 1 sentence on watch-outs (distance, capacity, competition) or null
-- Return 3-6 leads; if results are thin, fewer is fine
-- NEVER invent organizations, dates, contacts, or URLs not present in the results
-
-SEARCH RESULTS:
-${resultsText}
-
-Return ONLY a valid JSON array (no markdown, no explanation):
-[
-  {
-    "organization": "exact org or event name from results",
-    "segment": "${segmentId}",
-    "eventType": "tournament / annual conference / wedding / family reunion / construction project / etc",
-    "estimatedRooms": "number as string or null",
-    "estimatedAttendees": "number as string or null",
-    "dates": "dates or season from results or null",
-    "rfpDue": "YYYY-MM-DD or null",
-    "location": "city, state or null",
-    "fitScore": 0-100,
-    "fitReason": "2-3 sentences",
-    "concerns": "1 sentence or null",
-    "summary": "1-2 sentences on the opportunity",
-    "sourceUrl": "actual URL from results",
-    "contact": {
-      "name": "full name or null",
-      "title": "job title or null",
-      "email": "email or null",
-      "phone": "phone or null",
-      "website": "website or null"
-    },
-    "sv": {
-      "meetingName": "event name",
-      "accountName": "org name",
-      "roomAttendees": "number or null",
-      "showAttendees": "number or null",
-      "eeiType": "National or Regional or Local",
-      "repeatBusiness": false
-    }
-  }
-]`;
-
-  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  const data = await claudeRes.json();
-  return res.status(claudeRes.status).json(data);
+  return res.json({ content: [{ type: 'text', text: JSON.stringify(leads) }] });
 }
