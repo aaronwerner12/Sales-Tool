@@ -15,7 +15,6 @@ const SV_MAP = {
   sports:       { type:"Sports",      mkt:"Sports",      cat:"Sports Group",       src:"Outbound | Sales Call" },
   corporate:    { type:"Meeting",     mkt:"Corporate",   cat:"Corporate",          src:"Outbound | Sales Call" },
   construction: { type:"Group Rooms", mkt:"Group Rooms", cat:"Bulk Organizations", src:"Outbound | Sales Call" },
-  weddings:     { type:"Social",      mkt:"Social",      cat:"Social",             src:"Outbound | Sales Call" },
   reunions:     { type:"Social",      mkt:"Social",      cat:"Social",             src:"Outbound | Sales Call" },
   boutique:     { type:"Meeting",     mkt:"Association", cat:"Association",        src:"Outbound | Sales Call" },
 };
@@ -23,7 +22,6 @@ const SV_HOTELS = {
   sports:       ["Hampton Inn & Suites McKinney","Home2 Suites McKinney","La Quinta McKinney","Fairfield Inn & Suites McKinney","Holiday Inn Hotel & Suites McKinney Fairview"],
   corporate:    ["Sheraton McKinney Hotel","Denizen Hotel McKinney","Grand Hotel McKinney","Holiday Inn Hotel & Suites McKinney Fairview"],
   construction: ["TownePlace Suites McKinney","SpringHill Suites McKinney/Allen","Home2 Suites McKinney","WoodSpring Suites McKinney"],
-  weddings:     ["Sheraton McKinney Hotel","Grand Hotel McKinney","Denizen Hotel McKinney"],
   reunions:     ["Sheraton McKinney Hotel","Hampton Inn & Suites McKinney","Holiday Inn Hotel & Suites McKinney Fairview","Home2 Suites McKinney"],
   boutique:     ["Sheraton McKinney Hotel","Grand Hotel McKinney","Holiday Inn Hotel & Suites McKinney Fairview"],
 };
@@ -32,7 +30,6 @@ const SEGMENTS = [
   { id:"sports",       label:"Sports",       icon:"🏆", color:C.sun1,    bg:"#fff8ee", border:C.sun },
   { id:"corporate",    label:"Corporate",    icon:"💼", color:C.denim2,  bg:"#f0f8f9", border:C.denim2 },
   { id:"construction", label:"Construction", icon:"🏗️", color:C.myrtle1, bg:"#fff5f5", border:C.myrtle },
-  { id:"weddings",     label:"Weddings",     icon:"💍", color:C.lilac1,  bg:"#f8f5fa", border:C.lilac },
   { id:"reunions",     label:"Reunions",     icon:"👨‍👩‍👧‍👦", color:C.denim1,  bg:"#f0faf7", border:C.mint1 },
   { id:"boutique",     label:"Conferences",  icon:"🎯", color:C.denim,   bg:"#f0f4f7", border:C.denim1 },
 ];
