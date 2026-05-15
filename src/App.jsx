@@ -372,7 +372,7 @@ async function searchRfpLink(lead) {
   } catch { return null; }
 }
 
-
+export default function App() {
   const [leads, setLeads] = useState([]);
   const [segStatus, setSegStatus] = useState(() =>
     Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: false, error: null }]))
