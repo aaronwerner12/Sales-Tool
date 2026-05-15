@@ -291,9 +291,9 @@ async function generateLeadsForSegment(segId) {
 
   const prompt = `${segSpecific}
 
-Generate exactly 2 leads. Today is May 2026. Use realistic Texas organization names, real-sounding contacts, and genuine-feeling details. Include:
-- 1 lead at fitScore 82-90, 1 lead at 65-79
-- 1 rfpDue within 60 days, 1 null
+Generate exactly 4 leads. Today is May 2026. Use realistic Texas organization names, real-sounding contacts, and genuine-feeling details. Include:
+- Mix of fitScores: 1 at 85-90, 2 at 70-80, 1 at 58-68
+- RFP deadlines: 1 urgent (within 30 days), 1 in 60-90 days, 2 null
 - Varied locations: some DFW, some Houston/Austin, some national orgs
 
 Return ONLY a valid JSON array. Start with [ and end with ]. No markdown, no explanation, no code fences.
@@ -307,8 +307,8 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 2500,
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 4000,
       system: SYS_PROMPT,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -362,6 +362,26 @@ export default function App() {
   const [dismissed, setDismissed] = useState(new Set());
   const [saved, setSaved] = useState(new Set());
   const hasStarted = useRef(false);
+  const CACHE_KEY = "vmck_leads_cache";
+  const CACHE_TTL = 1000 * 60 * 60 * 8; // 8 hours
+
+  function loadCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const { ts, data } = JSON.parse(raw);
+      if (Date.now() - ts > CACHE_TTL) return null;
+      return data;
+    } catch { return null; }
+  }
+
+  function saveCache(allLeads) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allLeads })); } catch {}
+  }
+
+  function clearCache() {
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+  }
 
   async function loadSegment(seg, attempt = 1) {
     setSegStatus(p => ({ ...p, [seg.id]: { loading: true, done: false, error: null, retryIn: null } }));
@@ -369,7 +389,9 @@ export default function App() {
       const newLeads = await generateLeadsForSegment(seg.id);
       setLeads(prev => {
         const ex = new Set(prev.map(l => l.id));
-        return [...prev, ...newLeads.filter(l => !ex.has(l.id))];
+        const merged = [...prev, ...newLeads.filter(l => !ex.has(l.id))];
+        saveCache(merged);
+        return merged;
       });
       setSegStatus(p => ({ ...p, [seg.id]: { loading: false, done: true, error: null, retryIn: null } }));
     } catch(e) {
@@ -392,6 +414,7 @@ export default function App() {
   }
 
   function startAll() {
+    clearCache();
     setLeads([]);
     setDismissed(new Set());
     setSelected(null);
@@ -399,14 +422,21 @@ export default function App() {
     setLastRefresh(new Date());
     setSegStatus(Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: false, error: null }])));
     SEGMENTS.forEach((seg, i) => {
-      setTimeout(() => loadSegment(seg), i * 35000);
+      setTimeout(() => loadSegment(seg), i * 2000);
     });
   }
 
   useEffect(() => {
     if (!hasStarted.current) {
       hasStarted.current = true;
-      startAll();
+      const cached = loadCache();
+      if (cached && cached.length > 0) {
+        setLeads(cached);
+        setLastRefresh(new Date());
+        setSegStatus(Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: true, error: null, retryIn: null }])));
+      } else {
+        startAll();
+      }
     }
   }, []);
 
