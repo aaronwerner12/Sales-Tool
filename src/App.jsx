@@ -385,7 +385,7 @@ export default function App() {
     setLastRefresh(new Date());
     setSegStatus(Object.fromEntries(SEGMENTS.map(s => [s.id, { loading: false, done: false, error: null }])));
     SEGMENTS.forEach((seg, i) => {
-      setTimeout(() => loadSegment(seg), i * 800);
+      setTimeout(() => loadSegment(seg), i * 13000);
     });
   }
 
