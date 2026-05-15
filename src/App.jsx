@@ -291,9 +291,9 @@ async function generateLeadsForSegment(segId) {
 
   const prompt = `${segSpecific}
 
-Generate exactly 4 leads. Today is May 2026. For each lead use realistic Texas organization names, real-sounding contacts, plausible email formats, and genuine-feeling details. Include:
-- Mix of fitScores: 1 lead at 82-90, 2 at 70-80, 1 at 58-68
-- RFP deadlines: 1 urgent (within 30 days of today May 2026), 1 in 60-90 days, 2 null
+Generate exactly 2 leads. Today is May 2026. Use realistic Texas organization names, real-sounding contacts, and genuine-feeling details. Include:
+- 1 lead at fitScore 82-90, 1 lead at 65-79
+- 1 rfpDue within 60 days, 1 null
 - Varied locations: some DFW, some Houston/Austin, some national orgs
 
 Return ONLY a valid JSON array. Start with [ and end with ]. No markdown, no explanation, no code fences.
@@ -308,7 +308,7 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-5",
-      max_tokens: 1800,
+      max_tokens: 2500,
       system: SYS_PROMPT,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -326,11 +326,12 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     .map(b => b.text)
     .join("");
 
-  const start = text.indexOf("[");
-  const end = text.lastIndexOf("]");
-  if (start === -1 || end === -1) throw new Error(`No JSON array found. Response: ${text.slice(0, 300)}`);
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  const start = cleaned.indexOf("[");
+  const end = cleaned.lastIndexOf("]");
+  if (start === -1 || end === -1) throw new Error(`No JSON array found. Response: ${cleaned.slice(0, 300)}`);
 
-  const jsonStr = text.slice(start, end + 1);
+  const jsonStr = cleaned.slice(start, end + 1);
   let parsed;
   try {
     parsed = JSON.parse(jsonStr);
