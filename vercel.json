@@ -1,6 +1,7 @@
 {
   "functions": {
     "api/generate-leads.js": { "maxDuration": 60 },
-    "api/search-rfp.js": { "maxDuration": 15 }
+    "api/search-rfp.js": { "maxDuration": 15 },
+    "api/debug-search.js": { "maxDuration": 15 }
   }
 }

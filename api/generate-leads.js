@@ -1,33 +1,33 @@
 const SEGMENT_QUERIES = {
   sports: [
-    "site:sportsengine.com OR site:perfectgame.org OR site:usssa.com Texas tournament 2026 hotel",
-    "DFW North Texas youth baseball softball volleyball basketball tournament 2026 teams hotel block",
-    "Texas AAU tournament 2026 McKinney Frisco Allen hotel",
+    "Texas youth baseball tournament 2026 DFW registration teams",
+    "Texas youth volleyball basketball soccer tournament 2026 Collin County Allen Frisco McKinney",
+    "USSSA Perfect Game Texas tournament 2026 North Texas",
   ],
   corporate: [
-    "Dallas Fort Worth corporate conference annual meeting 2026 hotel room block RFP",
-    "Texas association annual conference 2026 DFW hotel site:cvent.com OR site:meetingsnet.com",
-    "North Texas business summit leadership conference 2026 hotel",
+    "Texas statewide association annual conference 2026 Dallas Fort Worth",
+    "North Texas corporate summit meeting conference 2026 Plano Allen McKinney",
+    "Texas industry conference annual meeting 2026 DFW hotel",
   ],
   construction: [
-    "Collin County Texas commercial construction project 2026 workforce housing hotel",
-    "McKinney Allen Frisco Texas data center warehouse development project 2026",
-    "North Texas corporate relocation expansion 2026 extended stay hotel",
+    "Collin County McKinney Texas commercial construction project 2026 permit approved",
+    "North Texas data center warehouse manufacturing facility 2026 construction groundbreaking",
+    "McKinney Allen Frisco Texas corporate campus expansion 2026",
   ],
   weddings: [
-    "site:theknot.com OR site:weddingwire.com McKinney Texas wedding 2026 hotel room block",
-    "DFW North Texas wedding venue 2026 out of town guests hotel block rooms",
-    "McKinney Texas wedding 2026 hotel accommodation room block",
+    "McKinney Texas wedding venue 2026 reception",
+    "North Texas DFW wedding 2026 venue booking",
+    "site:theknot.com McKinney Texas wedding 2026",
   ],
   reunions: [
-    "Texas family reunion 2026 hotel room block registration site:reunionfriendly.com OR site:eventbrite.com",
-    "Texas high school college class reunion 2026 hotel block DFW",
-    "Texas military reunion association 2026 hotel",
+    "Texas family reunion 2026 gathering registration",
+    "Texas high school class reunion 2026 DFW",
+    "Texas military alumni reunion 2026 annual gathering",
   ],
   boutique: [
-    "Texas nonprofit association annual conference 2026 hotel RFP site:cvent.com",
-    "Texas statewide association annual meeting 2026 DFW hotel",
-    "North Texas medical legal education professional conference 2026 hotel",
+    "Texas nonprofit association annual conference 2026 DFW meeting",
+    "Texas medical dental legal education professional conference 2026",
+    "Texas chamber of commerce trade association conference 2026 annual",
   ],
 };
 
@@ -67,8 +67,8 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           api_key: tavilyKey,
           query: q,
-          max_results: 7,
-          search_depth: 'advanced',
+          max_results: 6,
+          search_depth: 'basic',
         }),
       }).then(r => r.json()).catch(() => ({ results: [] }))
     )
@@ -98,17 +98,23 @@ export default async function handler(req, res) {
 
 ${HOTEL_CONTEXT}
 
-Below are REAL web search results. Your job is to extract group hotel lead opportunities — events, tournaments, conferences, weddings, reunions, or construction projects that would need hotel rooms in the DFW / North Texas area.
+The search results below contain real events, tournaments, conferences, construction projects, weddings, or reunions happening in Texas or the DFW area. Your job is to identify each distinct event or organization and evaluate it as a potential group hotel lead for McKinney's hotel inventory.
 
 RULES:
-- Extract any real organization or event mentioned in the results that could plausibly need hotel rooms
-- Use the exact organization/event name from the results
-- For numeric fields (rooms, attendees), use what is stated; if a range is given use the midpoint; if not stated use null
-- Use the actual URL from the search result as sourceUrl
-- Do NOT invent contact info, dates, or room counts not in the results — use null for missing fields
-- fitScore and fitReason are your analysis of how well McKinney's hotel inventory fits the opportunity
-- For contact fields: only include name/email/phone/website if explicitly in the results for that org
-- Aim for 3-6 leads per segment; if results are thin, fewer is fine — never fabricate
+- Treat every named event or organization in the results as a potential lead worth evaluating
+- Use the exact name of the event or organization from the results
+- estimatedRooms: if room count is stated use it; otherwise estimate based on attendee count (roughly 1 room per 2 attendees) and note it is estimated; use null only if no attendee info at all
+- estimatedAttendees: use what is stated; if a range is given use midpoint; null if unknown
+- dates: use what is in the results; null if not found
+- rfpDue: use YYYY-MM-DD only if an explicit deadline appears in the results; otherwise null
+- location: city/state from the results
+- sourceUrl: the actual URL from the result where this event was found
+- contact: only populate fields that explicitly appear in the results for this org — no guessing
+- fitScore: rate 0-100 how well McKinney's hotel inventory fits based on size, type, and proximity
+- fitReason: 2-3 sentences on why McKinney fits
+- concerns: 1 sentence on watch-outs (distance, capacity, competition) or null
+- Return 3-6 leads; if results are thin, fewer is fine
+- NEVER invent organizations, dates, contacts, or URLs not present in the results
 
 SEARCH RESULTS:
 ${resultsText}
@@ -118,23 +124,23 @@ Return ONLY a valid JSON array (no markdown, no explanation):
   {
     "organization": "exact org or event name from results",
     "segment": "${segmentId}",
-    "eventType": "tournament / conference / wedding / reunion / construction crew / etc or null",
+    "eventType": "tournament / annual conference / wedding / family reunion / construction project / etc",
     "estimatedRooms": "number as string or null",
     "estimatedAttendees": "number as string or null",
     "dates": "dates or season from results or null",
-    "rfpDue": "YYYY-MM-DD from results or null",
-    "location": "city/state from results or null",
+    "rfpDue": "YYYY-MM-DD or null",
+    "location": "city, state or null",
     "fitScore": 0-100,
-    "fitReason": "2-3 sentences on why McKinney hotel inventory fits",
-    "concerns": "1 sentence on potential concerns or null",
-    "summary": "1-2 sentences summarizing the opportunity",
-    "sourceUrl": "actual URL from search results",
+    "fitReason": "2-3 sentences",
+    "concerns": "1 sentence or null",
+    "summary": "1-2 sentences on the opportunity",
+    "sourceUrl": "actual URL from results",
     "contact": {
-      "name": "full name from results or null",
-      "title": "job title from results or null",
-      "email": "email address from results or null",
-      "phone": "phone number from results or null",
-      "website": "org website from results or null"
+      "name": "full name or null",
+      "title": "job title or null",
+      "email": "email or null",
+      "phone": "phone or null",
+      "website": "website or null"
     },
     "sv": {
       "meetingName": "event name",
