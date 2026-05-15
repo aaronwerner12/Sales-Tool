@@ -39,6 +39,76 @@ const SEGMENTS = [
 const SEG_MAP = Object.fromEntries(SEGMENTS.map(s=>[s.id,s]));
 
 
+function ViabilityBar({ score }) {
+  const color = score >= 80 ? C.denim1 : score >= 60 ? C.sun1 : C.myrtle1;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:5}}>
+      <div style={{width:60,height:5,background:C.dust,borderRadius:3,overflow:"hidden"}}>
+        <div style={{width:`${score}%`,height:"100%",background:color,borderRadius:3,transition:"width 0.4s"}}/>
+      </div>
+      <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:9,color,fontWeight:700}}>{score}</span>
+    </div>
+  );
+}
+
+function DeadlineBadge({ rfpDue }) {
+  const diff = Math.ceil((new Date(rfpDue) - new Date()) / (1000*60*60*24));
+  const color = diff <= 7 ? C.myrtle1 : diff <= 30 ? C.sun1 : C.denim2;
+  return (
+    <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:"white",background:color,borderRadius:8,padding:"2px 7px",fontWeight:700,whiteSpace:"nowrap"}}>
+      {diff < 0 ? "Overdue" : `${diff}d · ${rfpDue}`}
+    </span>
+  );
+}
+
+function CopyBtn({ value }) {
+  const [copied, setCopied] = useState(false);
+  function doCopy() {
+    navigator.clipboard.writeText(String(value)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
+  }
+  return (
+    <button onClick={doCopy}
+      style={{background:"none",border:`1px solid ${C.dust}`,borderRadius:4,padding:"1px 6px",fontSize:8,cursor:"pointer",color:copied?C.denim1:"#aaa",fontFamily:"'Josefin Sans',sans-serif",whiteSpace:"nowrap"}}>
+      {copied ? "✓" : "Copy"}
+    </button>
+  );
+}
+
+function SvPanel({ lead }) {
+  const sv = lead.sv || {};
+  const svMap = SV_MAP[lead.segment] || SV_MAP.boutique;
+  const hotels = SV_HOTELS[lead.segment] || SV_HOTELS.boutique;
+  const fields = [
+    ["Meeting Name", sv.meetingName || lead.organization],
+    ["Account Name", sv.accountName || lead.organization],
+    ["Event Type", svMap.type],
+    ["Market Segment", svMap.mkt],
+    ["Category", svMap.cat],
+    ["Source", svMap.src],
+    ["Room Attendees", sv.roomAttendees || lead.estimatedRooms || "—"],
+    ["Show Attendees", sv.showAttendees || lead.estimatedAttendees || "—"],
+    ["Arrival Date", lead.dates || "—"],
+    ["EEI Type", sv.eeiType || "Regional"],
+    ["Repeat Business", sv.repeatBusiness ? "Yes" : "No"],
+    ["Hotels to Contact", hotels.join(", ")],
+  ];
+  return (
+    <div style={{marginTop:10,background:"#f0f4f7",border:`1px solid ${C.denim2}`,borderRadius:6,padding:"10px 12px"}}>
+      <div style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:7,letterSpacing:"2px",color:C.denim,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Simpleview CRM Fields</div>
+      {fields.map(([l, v]) => (
+        <div key={l} style={{display:"grid",gridTemplateColumns:"110px 1fr auto",gap:5,alignItems:"start",marginBottom:5}}>
+          <span style={{fontFamily:"'Josefin Sans',sans-serif",fontSize:8,color:C.denim2,textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:700,paddingTop:1}}>{l}</span>
+          <span style={{fontSize:9,color:C.char,lineHeight:1.4,wordBreak:"break-word"}}>{v}</span>
+          <CopyBtn value={v}/>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 async function generateLeadsForSegment(segId) {
   const res = await fetch("/api/generate-leads", {
     method: "POST",
