@@ -308,7 +308,7 @@ The sv object must have: meetingName, accountName, contactName, roomAttendees, s
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-5",
-      max_tokens: 5000,
+      max_tokens: 3500,
       system: SYS_PROMPT,
       messages: [{ role: "user", content: prompt }],
     }),
